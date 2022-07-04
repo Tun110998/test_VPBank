@@ -1,0 +1,87 @@
+/*1) Write a query to return all employees still working for the company 
+with last names starting with "Smith" sorted by last name then first name.*/
+
+select emp."ID", emp."FirstName", emp."LastName"
+from public."employee" as emp
+where emp."TerminationDate" is null 
+and emp."LastName" = 'Smith'
+order by emp."FirstName";
+
+/*2) Given the `Employee` and `AnnualReviews` tables, 
+write a query to return all employees who have never had a review sorted by HireDate.*/
+
+select emp."ID", emp."FirstName", emp."LastName", emp."HireDate"
+from public."employee" as emp
+left join public."AnnualReviews" as review 
+on emp."ID" = review."empID"
+where review."empID" is null
+order by emp."HireDate";
+
+/*3) Write a query to calculate the difference (in days) 
+between the most and least tenured employee still working for the company*/
+
+select emp."ID", emp."FirstName", emp."LastName", emp."HireDate"
+from public."employee" as emp
+where emp."TerminationDate" is null
+order by emp."HireDate";
+
+select max(emp."HireDate") - min(emp."HireDate") as days
+from 
+	(
+		select emp."ID", emp."FirstName", emp."LastName", emp."HireDate"
+		from public."employee" as emp
+		where emp."TerminationDate" is null
+		order by emp."HireDate"
+	) as emp;
+
+/*4) Given the employee table above, write a query to calculate the longest period 
+(in days) that the company has gone without a hiring or firing anyone*/
+
+with tb as (select emp."HireDate" as Datetime
+from public."employee" as emp
+union
+select emp."TerminationDate" as Datetime 
+from public."employee" as emp
+order by Datetime)
+
+select max(days)
+from (select tb."datetime", tb."datetime" - lag(tb."datetime") over (order by tb."datetime") as days
+from tb
+where tb."datetime" is not null
+order by tb."datetime") as count_day
+
+/*5) Write a query that returns each employee and for each row/employee include 
+the greatest number of employees that worked for the company at any time 
+during their tenure and the first date that maximum was reached. 
+Extra points for not using cursors*/
+
+select distinct on (e."ID") *
+from public."employee" e
+join (
+    select sum(count) over (order by Dateaq) as num_of_employee, Dateaq
+    from (
+        select e."HireDate" as Dateaq, 1 as count
+        from public."employee" e
+        union all
+        select e."TerminationDate", -1
+        from public."employee" e
+        where e."TerminationDate" is not null
+        ) s
+    ) s on Dateaq between e."HireDate" and coalesce(e."TerminationDate", 'infinity')
+order by e."ID", num_of_employee desc, Dateaq asc;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
